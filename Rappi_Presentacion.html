@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Powered Store Availability Dashboard — Rappi Engineering 2026</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css">
+<style>
+  /* ── Brand tokens ──────────────────────────────────────────────── */
+  :root {
+    --rappi:   #E84510;
+    --rappi-d: #A33009;
+    --teal:    #38BFA1;
+    --teal-d:  #1E6B5B;
+    --gold:    #C9A84C;
+    --bg:      #0C0B09;
+    --bg-p:    #141210;
+    --bg-c:    #1C1A17;
+    --bg-s:    #231F1B;
+    --lt:      #C8C2BA;
+    --mid:     #7A7269;
+    --dk:      #3A3530;
+    --white:   #F0EDE8;
+  }
+
+  /* ── Base overrides ─────────────────────────────────────────────── */
+  .reveal-viewport { background: var(--bg); }
+  .reveal .slides   { text-align: left; }
+  .reveal section   { padding: 0 !important; }
+  .reveal h1, .reveal h2, .reveal h3 { text-transform: none; margin: 0; }
+  .reveal p, .reveal li { margin: 0; }
+  .reveal .slide-number { display: none; }
+
+  /* ── Slide wrapper ──────────────────────────────────────────────── */
+  .slide {
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+    padding: 52px 72px 36px;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+
+  /* ── Dot-grid bg ────────────────────────────────────────────────── */
+  .slide::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, var(--dk) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: .4;
+    pointer-events: none;
+  }
+
+  /* Left accent bar */
+  .slide::after {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    pointer-events: none;
+  }
+  .accent-red::after  { background: var(--rappi); }
+  .accent-teal::after { background: var(--teal);  }
+  .accent-gold::after { background: var(--gold);  }
+  .accent-mid::after  { background: var(--mid);   }
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  .label {
+    font-family: 'Courier New', monospace;
+    font-size: .65rem; letter-spacing: .12em;
+    color: var(--rappi); text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .label.teal  { color: var(--teal); }
+  .label.gold  { color: var(--gold); }
+  .label.mid   { color: var(--mid);  }
+
+  .rule { height: 1px; background: var(--dk); margin: 6px 0 18px; }
+
+  h1.hero   { font-family: Georgia, serif; font-size: clamp(3rem,5.5vw,5.5rem); font-weight: 700; line-height: 1.05; color: var(--white); }
+  h2.section{ font-family: Georgia, serif; font-size: clamp(2rem,4vw,3.5rem); font-weight: 700; line-height: 1.1;  color: var(--white); }
+  .accent-word { color: var(--rappi); }
+  .accent-teal .accent-word { color: var(--teal); }
+  .accent-gold .accent-word { color: var(--gold); }
+
+  .body-text  { font-size: .9rem; color: var(--lt); line-height: 1.65; }
+  .mono       { font-family: 'Courier New', monospace; font-size: .8rem; color: var(--mid); }
+  .mono.teal  { color: var(--teal); }
+  .mono.red   { color: var(--rappi); }
+  .mono.gold  { color: var(--gold); }
+
+  /* ── Corner marks ───────────────────────────────────────────────── */
+  .corners { position: absolute; inset: 0; pointer-events: none; }
+  .corners span {
+    position: absolute; width: 18px; height: 18px;
+    border-color: var(--dk); border-style: solid; border-width: 0;
+  }
+  .corners span:nth-child(1){ top:38px;  left:40px;  border-top-width:1px; border-left-width:1px;  }
+  .corners span:nth-child(2){ top:38px;  right:40px; border-top-width:1px; border-right-width:1px; }
+  .corners span:nth-child(3){ bottom:28px; left:40px;  border-bottom-width:1px; border-left-width:1px;  }
+  .corners span:nth-child(4){ bottom:28px; right:40px; border-bottom-width:1px; border-right-width:1px; }
+
+  .slide-num {
+    position: absolute; bottom: 24px; right: 48px;
+    font-family: 'Courier New', monospace; font-size: .6rem; color: var(--mid);
+  }
+
+  /* ── Cards ──────────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-c); border-radius: 8px; padding: 16px 20px;
+    position: relative; overflow: hidden;
+  }
+  .card-top-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  /* ── Pill/badge ─────────────────────────────────────────────────── */
+  .pill {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-family: 'Courier New', monospace; font-size: .68rem;
+    background: var(--bg-c); border: 1px solid var(--dk);
+    color: var(--lt); margin: 2px;
+  }
+  .pill.red  { color: var(--rappi);  border-color: rgba(232,69,16,.3); }
+  .pill.teal { color: var(--teal);   border-color: rgba(56,191,161,.3); }
+  .pill.gold { color: var(--gold);   border-color: rgba(201,168,76,.3); }
+  .pill.purple { color: #BD34FE;     border-color: rgba(189,52,254,.3); }
+
+  /* ── KPI card ───────────────────────────────────────────────────── */
+  .kpi-card {
+    background: var(--bg-c); border-radius: 8px;
+    padding: 14px 18px 12px; position: relative; overflow: hidden;
+  }
+  .kpi-val   { font-family: Georgia, serif; font-size: 2.2rem; font-weight: 700; line-height: 1; }
+  .kpi-label { font-size: .75rem; color: var(--lt); margin-top: 4px; }
+  .kpi-sub   { font-family: 'Courier New', monospace; font-size: .6rem; color: var(--mid); margin-top: 2px; }
+  .kpi-bar   { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+
+  /* ── Signal wave canvas ─────────────────────────────────────────── */
+  canvas.wave { display: block; width: 100%; }
+
+  /* ── Animate fragments ──────────────────────────────────────────── */
+  .reveal .fragment.fade-up {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .reveal .fragment.fade-up.visible {
+    opacity: 1; transform: translateY(0);
+  }
+  .reveal .fragment.scale-in {
+    opacity: 0; transform: scale(.88);
+    transition: opacity .4s ease, transform .4s ease;
+  }
+  .reveal .fragment.scale-in.visible {
+    opacity: 1; transform: scale(1);
+  }
+  .reveal .fragment.slide-right {
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity .45s ease, transform .45s ease;
+  }
+  .reveal .fragment.slide-right.visible {
+    opacity: 1; transform: translateX(0);
+  }
+
+  /* ── Counter animation ──────────────────────────────────────────── */
+  @keyframes countUp { from { opacity: 0; } to { opacity: 1; } }
+  .counter-val { animation: none; }
+
+  /* ── Pulse ring ─────────────────────────────────────────────────── */
+  @keyframes pulseRing {
+    0%   { transform: scale(.95); opacity: .7; }
+    70%  { transform: scale(1.1);  opacity: 0;  }
+    100% { transform: scale(.95); opacity: 0;  }
+  }
+  .pulse-ring {
+    position: absolute; border-radius: 50%;
+    animation: pulseRing 2.4s ease-out infinite;
+    pointer-events: none;
+  }
+
+  /* ── Scan line ──────────────────────────────────────────────────── */
+  @keyframes scanLine {
+    0%   { top: -2px; opacity: .6; }
+    100% { top: 100%; opacity: 0;  }
+  }
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    animation: scanLine 3.5s linear infinite;
+    pointer-events: none;
+  }
+
+  /* ── Typing cursor ──────────────────────────────────────────────── */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor { animation: blink 1s step-end infinite; color: var(--rappi); }
+
+  /* ── Grid lines (chart) ─────────────────────────────────────────── */
+  .chart-wrap {
+    position: relative; background: var(--bg-c);
+    border-radius: 8px; overflow: hidden; padding: 14px;
+  }
+  .chart-wrap .scan-line { background: linear-gradient(90deg,transparent,rgba(56,191,161,.5),transparent); }
+
+  /* ── Ref card ───────────────────────────────────────────────────── */
+  .ref-card {
+    background: var(--bg-c); border-radius: 6px;
+    padding: 12px 16px 10px; border-left: 3px solid var(--mid);
+    position: relative;
+  }
+  .ref-num { font-family: Georgia, serif; font-size: 1.4rem; font-weight: 700; }
+
+  /* ── Slide transition override ──────────────────────────────────── */
+  .reveal .slides section { transition: none; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 1 — COVER
+════════════════════════════════════════════════════════ -->
+<section data-transition="fade" data-transition-speed="slow">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <!-- pulse rings background -->
+  <div style="position:absolute;right:28%;top:50%;transform:translateY(-50%);pointer-events:none;opacity:.12">
+    <div style="position:relative;width:500px;height:500px">
+      <div class="pulse-ring" style="width:500px;height:500px;top:0;left:0;border:1.5px solid var(--rappi);animation-delay:0s"></div>
+      <div class="pulse-ring" style="width:380px;height:380px;top:60px;left:60px;border:1.5px solid var(--rappi);animation-delay:.6s"></div>
+      <div class="pulse-ring" style="width:260px;height:260px;top:120px;left:120px;border:1.5px solid var(--rappi);animation-delay:1.2s"></div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <span class="mono red" style="font-size:.65rem;letter-spacing:.14em">RAPPI ENGINEERING</span>
+    <div style="flex:1;height:1px;background:var(--rappi);opacity:.3"></div>
+    <span class="mono" style="font-size:.6rem">2026</span>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-top:10px">
+    <div class="fragment fade-up" data-fragment-index="0">
+      <h1 class="hero">AI-Powered<br><span class="accent-word">Store Availability</span><br>Dashboard</h1>
+    </div>
+
+    <div class="rule fragment fade-up" data-fragment-index="1" style="margin-top:20px;width:400px;background:var(--rappi);opacity:.5"></div>
+
+    <p class="fragment fade-up" data-fragment-index="1"
+       style="margin-top:10px;font-size:.85rem;color:var(--mid)">
+      Prueba Técnica · Construye, visualiza y conversa con datos usando agentes de AI
+    </p>
+
+    <div class="fragment fade-up" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:22px" data-fragment-index="2">
+      <span class="pill red">React 19</span>
+      <span class="pill purple">Vite 6</span>
+      <span class="pill red">Recharts</span>
+      <span class="pill teal">Claude AI</span>
+      <span class="pill gold">Anthropic API</span>
+    </div>
+  </div>
+
+  <div class="fragment fade-up" style="display:flex;justify-content:space-between;align-items:flex-end" data-fragment-index="3">
+    <div>
+      <p style="font-family:Georgia,serif;font-size:.95rem;color:var(--white);font-weight:600">Juan Blanco</p>
+      <p class="mono" style="font-size:.6rem;margin-top:2px">21 Abril 2026</p>
+    </div>
+    <div style="display:flex;gap:18px">
+      <div style="text-align:right">
+        <p class="mono" style="font-size:.6rem">FORMATO</p>
+        <p style="font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--white)">Individual</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-num">01 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 2 — CONTEXTO
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label">01 · Contexto</div>
+  <div class="rule"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;flex:1;align-items:start">
+    <div>
+      <h2 class="section fragment fade-up" data-fragment-index="0">
+        La disponibilidad<br>de tiendas es un<br><span class="accent-word">dato crítico.</span>
+      </h2>
+      <p class="body-text fragment fade-up" style="margin-top:22px" data-fragment-index="1">
+        Cada cambio de estado <strong style="color:var(--white)">online/offline</strong> de una tienda en la plataforma Rappi genera un registro en tiempo real.
+        Estos eventos afectan directamente la experiencia del usuario y los ingresos operacionales.
+      </p>
+      <blockquote class="fragment fade-up" data-fragment-index="2"
+        style="margin-top:22px;padding-left:16px;border-left:3px solid var(--rappi);font-style:italic;color:var(--lt);font-size:.85rem">
+        "Queremos ver cómo piensan,<br>no solo qué entregan."
+        <footer style="font-family:'Courier New',monospace;font-size:.6rem;color:var(--mid);margin-top:6px;font-style:normal">— Rappi Engineering</footer>
+      </blockquote>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:4px">CRITERIOS DE EVALUACIÓN</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+
+      <div id="criteria-list">
+        <div class="card fragment scale-in" data-fragment-index="3" style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <span style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--rappi);min-width:52px">30%</span>
+          <div><p style="color:var(--white);font-size:.82rem;font-weight:600">Uso efectivo de AI</p>
+               <p class="mono" style="font-size:.6rem;margin-top:2px">¿Estratégico o solo copy/paste?</p></div>
+        </div>
+        <div class="card fragment scale-in" data-fragment-index="4" style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <span style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--teal);min-width:52px">25%</span>
+          <div><p style="color:var(--white);font-size:.82rem;font-weight:600">Funcionalidad</p>
+               <p class="mono" style="font-size:.6rem;margin-top:2px">¿La app funciona y responde bien?</p></div>
+        </div>
+        <div class="card fragment scale-in" data-fragment-index="5" style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <span style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--gold);min-width:52px">20%</span>
+          <div><p style="color:var(--white);font-size:.82rem;font-weight:600">Creatividad y UX</p>
+               <p class="mono" style="font-size:.6rem;margin-top:2px">¿Visualmente atractivo e intuitivo?</p></div>
+        </div>
+        <div class="card fragment scale-in" data-fragment-index="6" style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <span style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--mid);min-width:52px">15%</span>
+          <div><p style="color:var(--white);font-size:.82rem;font-weight:600">Presentación</p>
+               <p class="mono" style="font-size:.6rem;margin-top:2px">¿Entienden lo que construyeron?</p></div>
+        </div>
+        <div class="card fragment scale-in" data-fragment-index="7" style="display:flex;align-items:center;gap:16px">
+          <span style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--dk);min-width:52px">10%</span>
+          <div><p style="color:var(--lt);font-size:.82rem;font-weight:600">Calidad del código</p>
+               <p class="mono" style="font-size:.6rem;margin-top:2px">¿Organizado y con buenas prácticas?</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">02 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 3 — ARQUITECTURA
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label">02 · Solución</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">Arquitectura de<br>la <span class="accent-word">Aplicación</span></h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;flex:1;align-items:start">
+    <!-- Component 1 -->
+    <div class="card fragment fade-up" data-fragment-index="1" style="height:100%;box-sizing:border-box">
+      <div class="card-top-bar" style="background:var(--rappi)"></div>
+      <p style="font-family:Georgia,serif;font-size:2.5rem;font-weight:700;color:rgba(232,69,16,.2);line-height:1">01</p>
+      <p style="font-family:Georgia,serif;font-size:1.35rem;font-weight:700;color:var(--white);margin-top:-8px">Dashboard de<br>Visualización</p>
+      <div class="rule" style="margin:10px 0"></div>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:7px">
+        <li class="fragment slide-right" data-fragment-index="2"><span class="mono red">→</span> <span class="body-text">5 KPI Cards con sparklines</span></li>
+        <li class="fragment slide-right" data-fragment-index="3"><span class="mono red">→</span> <span class="body-text">Gráfico de serie temporal (Recharts)</span></li>
+        <li class="fragment slide-right" data-fragment-index="4"><span class="mono red">→</span> <span class="body-text">Golden Signals panel (Google SRE)</span></li>
+        <li class="fragment slide-right" data-fragment-index="5"><span class="mono red">→</span> <span class="body-text">Anomaly Detection con AI</span></li>
+        <li class="fragment slide-right" data-fragment-index="6"><span class="mono red">→</span> <span class="body-text">SLO Summary + error budget</span></li>
+        <li class="fragment slide-right" data-fragment-index="7"><span class="mono red">→</span> <span class="body-text">Carga de CSV personalizado</span></li>
+        <li class="fragment slide-right" data-fragment-index="8"><span class="mono red">→</span> <span class="body-text">Dark / Light mode + SplashScreen</span></li>
+      </ul>
+      <p class="mono" style="margin-top:12px;font-size:.6rem">CSV Dataset ↓ · React + Recharts</p>
+    </div>
+
+    <!-- Component 2 -->
+    <div class="card fragment fade-up" data-fragment-index="1" style="height:100%;box-sizing:border-box">
+      <div class="card-top-bar" style="background:var(--teal)"></div>
+      <p style="font-family:Georgia,serif;font-size:2.5rem;font-weight:700;color:rgba(56,191,161,.2);line-height:1">02</p>
+      <p style="font-family:Georgia,serif;font-size:1.35rem;font-weight:700;color:var(--white);margin-top:-8px">Chatbot<br>Semántico AI</p>
+      <div class="rule" style="margin:10px 0"></div>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:7px">
+        <li class="fragment slide-right" data-fragment-index="2"><span class="mono teal">→</span> <span class="body-text">Conectado a Anthropic API</span></li>
+        <li class="fragment slide-right" data-fragment-index="3"><span class="mono teal">→</span> <span class="body-text">Modelo: claude-sonnet-4</span></li>
+        <li class="fragment slide-right" data-fragment-index="4"><span class="mono teal">→</span> <span class="body-text">System prompt SRE-aware</span></li>
+        <li class="fragment slide-right" data-fragment-index="5"><span class="mono teal">→</span> <span class="body-text">Contexto del dataset embebido</span></li>
+        <li class="fragment slide-right" data-fragment-index="6"><span class="mono teal">→</span> <span class="body-text">Quick questions pre-definidas</span></li>
+        <li class="fragment slide-right" data-fragment-index="7"><span class="mono teal">→</span> <span class="body-text">Historial de conversación</span></li>
+        <li class="fragment slide-right" data-fragment-index="8"><span class="mono teal">→</span> <span class="body-text">Streaming SSE en NarrativePanel</span></li>
+      </ul>
+      <p class="mono teal" style="margin-top:12px;font-size:.6rem">Anthropic API ↓ · Direct browser access</p>
+    </div>
+  </div>
+
+  <div class="slide-num">03 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 4 — PROCESO DE DESARROLLO
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-gold">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label gold">03 · Proceso</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">
+    Paso a Paso:<br><span style="color:var(--gold)">Cómo lo construí</span>
+  </h2>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px">
+
+    <div class="card fragment scale-in" data-fragment-index="1" style="border-top:3px solid var(--rappi);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--rappi);letter-spacing:.1em;margin-bottom:6px">PASO 01 · ~10 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Leer el brief<br>y explorar el CSV</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Leí la prueba completa. Abrí el CSV y analicé: 290 filas, intervalos de 10s, rango 06:11–07:00, valores de 37 a 20,762 tiendas.</p>
+      <div style="margin-top:10px;background:var(--bg-p);border-radius:4px;padding:7px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Acotar el análisis a una ventana horaria para hacer el dashboard más legible.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="2" style="border-top:3px solid var(--gold);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--gold);letter-spacing:.1em;margin-bottom:6px">PASO 02 · ~15 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Diseñar la<br>arquitectura con Claude</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Le pedí a Claude que propusiera una arquitectura React de dos paneles. Juntos definimos los componentes, el flujo de datos y qué modelos usar para cada caso.</p>
+      <div style="margin-top:10px;background:var(--bg-p);border-radius:4px;padding:7px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Separar la lógica de datos (<span class="mono gold">availabilityData.js</span>) de los componentes visuales.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="3" style="border-top:3px solid var(--teal);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--teal);letter-spacing:.1em;margin-bottom:6px">PASO 03 · ~20 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Scaffolding y<br>componentes base</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Claude generó el proyecto Vite+React, la estructura de carpetas y los componentes base. Yo revisé cada archivo y ajusté la lógica de datos reales del CSV.</p>
+      <div style="margin-top:10px;background:var(--bg-p);border-radius:4px;padding:7px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Hardcodear el dataset pre-procesado para garantizar la demo sin depender de carga de archivos.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="4" style="border-top:3px solid var(--lt);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--lt);letter-spacing:.1em;margin-bottom:6px">PASO 04 · ~25 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Dashboard:<br>KPIs y gráfico</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Construí el gráfico principal con Recharts, las 5 KPI cards con skeleton loading, y la línea de SLO de referencia. Iteré 3 veces el diseño de colores.</p>
+      <div style="margin-top:10px;background:var(--bg-p);border-radius:4px;padding:7px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Usar AreaChart con fill para visualizar el volumen acumulado de disponibilidad.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px">
+
+    <div class="card fragment scale-in" data-fragment-index="5" style="border-top:3px solid var(--rappi);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--rappi);letter-spacing:.1em;margin-bottom:6px">PASO 05 · ~20 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Chatbot:<br>integrar Claude API</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Conecté la Anthropic API directamente desde el browser. El mayor reto fue configurar el header <span class="mono red">anthropic-dangerous-direct-browser-access</span> correctamente.</p>
+      <div style="margin-top:8px;background:var(--bg-p);border-radius:4px;padding:6px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Reto encontrado</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">CORS bloqueaba las requests. Claude me explicó el header especial de Anthropic para acceso directo.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="6" style="border-top:3px solid var(--gold);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--gold);letter-spacing:.1em;margin-bottom:6px">PASO 06 · ~15 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Narrative Panel<br>+ SSE Streaming</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Agregué el panel de narrativa ejecutiva con Haiku y streaming SSE. El efecto de texto que va apareciendo en tiempo real mejoró mucho la percepción de la IA.</p>
+      <div style="margin-top:8px;background:var(--bg-p);border-radius:4px;padding:6px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Reto encontrado</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Parsear el stream SSE línea a línea sin perder chunks parciales del buffer.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="7" style="border-top:3px solid var(--teal);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--teal);letter-spacing:.1em;margin-bottom:6px">PASO 07 · ~15 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">SRE Framework:<br>Golden Signals + SLO</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">Apliqué el framework del Google SRE Book para estructurar los paneles inferiores. La detección de plateau se hizo con análisis estadístico de deltas.</p>
+      <div style="margin-top:8px;background:var(--bg-p);border-radius:4px;padding:6px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">Usar Golden Signals como marco conceptual demostraba conocimiento de SRE real.</p>
+      </div>
+    </div>
+
+    <div class="card fragment scale-in" data-fragment-index="8" style="border-top:3px solid var(--lt);padding:14px 16px">
+      <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--lt);letter-spacing:.1em;margin-bottom:6px">PASO 08 · ~10 min</p>
+      <p style="font-family:Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--white);margin-bottom:8px">Polish: SplashScreen,<br>dark mode, CSV upload</p>
+      <div class="rule" style="margin:0 0 8px"></div>
+      <p class="body-text" style="font-size:.76rem">SplashScreen animado con logo de Rappi, toggle dark/light, y cargador de CSV propio para demostrar con datasets alternativos.</p>
+      <div style="margin-top:8px;background:var(--bg-p);border-radius:4px;padding:6px 10px">
+        <p class="mono" style="font-size:.6rem;color:var(--mid)">Decisión clave</p>
+        <p class="body-text" style="font-size:.73rem;margin-top:2px">La UX de onboarding (splash + skeleton) hacía la app sentirse más profesional.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="slide-num">04 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 5 — WORKFLOW CON CLAUDE
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-teal">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label teal">04 · Workflow con AI</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">
+    Cómo trabajé con<br><span style="color:var(--teal)">Claude como Copiloto</span>
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:28px;margin-top:18px;flex:1;align-items:start">
+
+    <!-- Left: Workflow loop -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="fragment fade-up" data-fragment-index="1"
+           style="background:var(--bg-c);border-radius:8px;padding:14px 18px;border-left:3px solid var(--teal)">
+        <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--teal);margin-bottom:6px">EL CICLO DE TRABAJO</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <span style="background:var(--bg-p);border-radius:20px;padding:5px 14px;font-size:.75rem;color:var(--white);border:1px solid var(--dk)">1. Yo defino el qué</span>
+          <span style="color:var(--teal);font-size:1rem">→</span>
+          <span style="background:var(--bg-p);border-radius:20px;padding:5px 14px;font-size:.75rem;color:var(--white);border:1px solid var(--dk)">2. Claude propone el cómo</span>
+          <span style="color:var(--teal);font-size:1rem">→</span>
+          <span style="background:var(--bg-p);border-radius:20px;padding:5px 14px;font-size:.75rem;color:var(--white);border:1px solid var(--dk)">3. Yo reviso y ajusto</span>
+          <span style="color:var(--teal);font-size:1rem">→</span>
+          <span style="background:var(--bg-p);border-radius:20px;padding:5px 14px;font-size:.75rem;color:var(--white);border:1px solid var(--dk)">4. Integro al proyecto</span>
+        </div>
+      </div>
+
+      <p class="mono fragment fade-up" style="font-size:.6rem;letter-spacing:.1em;color:var(--mid)" data-fragment-index="2">TIPOS DE PROMPTS USADOS</p>
+
+      <div class="card fragment fade-up" data-fragment-index="2" style="padding:13px 16px;border-left:3px solid var(--teal)">
+        <p style="color:var(--teal);font-size:.78rem;font-weight:600;margin-bottom:5px">🏗 Prompts de Diseño</p>
+        <p style="background:var(--bg-p);border-radius:4px;padding:8px 10px;font-family:'Courier New',monospace;font-size:.68rem;color:var(--lt);line-height:1.6;margin:0">
+          "Quiero un dashboard React para visualizar series temporales de disponibilidad de tiendas. Necesito KPI cards, un gráfico principal y un chatbot. ¿Cómo estructurarías los componentes?"
+        </p>
+      </div>
+
+      <div class="card fragment fade-up" data-fragment-index="3" style="padding:13px 16px;border-left:3px solid var(--gold)">
+        <p style="color:var(--gold);font-size:.78rem;font-weight:600;margin-bottom:5px">🔧 Prompts de Implementación</p>
+        <p style="background:var(--bg-p);border-radius:4px;padding:8px 10px;font-family:'Courier New',monospace;font-size:.68rem;color:var(--lt);line-height:1.6;margin:0">
+          "El NarrativePanel debe usar claude-haiku con streaming SSE. La respuesta llega como chunks de texto, necesito que se vaya mostrando en pantalla mientras llega. Implementa el lector de stream."
+        </p>
+      </div>
+
+      <div class="card fragment fade-up" data-fragment-index="4" style="padding:13px 16px;border-left:3px solid var(--rappi)">
+        <p style="color:var(--rappi);font-size:.78rem;font-weight:600;margin-bottom:5px">🐛 Prompts de Debug</p>
+        <p style="background:var(--bg-p);border-radius:4px;padding:8px 10px;font-family:'Courier New',monospace;font-size:.68rem;color:var(--lt);line-height:1.6;margin:0">
+          "Tengo un error CORS al llamar a la Anthropic API desde el browser. El header Content-Type está correcto, ¿qué header especial necesito para habilitar acceso directo desde el navegador?"
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Right: What I owned vs Claude -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="fragment fade-up" data-fragment-index="5"
+           style="background:var(--bg-c);border-radius:8px;padding:14px 18px">
+        <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--mid);letter-spacing:.1em;margin-bottom:10px">YO DECIDÍ · CLAUDE EJECUTÓ</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <p style="color:var(--white);font-size:.72rem;font-weight:600;margin-bottom:6px">Yo decidí</p>
+            <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:7px">
+              <li class="fragment slide-right" data-fragment-index="6" style="font-size:.75rem;color:var(--lt)">✦ Qué datos mostrar y con qué lógica</li>
+              <li class="fragment slide-right" data-fragment-index="7" style="font-size:.75rem;color:var(--lt)">✦ Qué modelo usar en cada componente</li>
+              <li class="fragment slide-right" data-fragment-index="8" style="font-size:.75rem;color:var(--lt)">✦ El system prompt del chatbot SRE</li>
+              <li class="fragment slide-right" data-fragment-index="9" style="font-size:.75rem;color:var(--lt)">✦ Los criterios de detección de anomalías</li>
+              <li class="fragment slide-right" data-fragment-index="10" style="font-size:.75rem;color:var(--lt)">✦ El marco SRE (Golden Signals + SLO)</li>
+              <li class="fragment slide-right" data-fragment-index="11" style="font-size:.75rem;color:var(--lt)">✦ Cuándo el código era aceptable o no</li>
+            </ul>
+          </div>
+          <div>
+            <p style="color:var(--teal);font-size:.72rem;font-weight:600;margin-bottom:6px">Claude ejecutó</p>
+            <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:7px">
+              <li class="fragment slide-right" data-fragment-index="6" style="font-size:.75rem;color:var(--lt)">⟶ Estructura de componentes React</li>
+              <li class="fragment slide-right" data-fragment-index="7" style="font-size:.75rem;color:var(--lt)">⟶ Boilerplate y configuración Vite</li>
+              <li class="fragment slide-right" data-fragment-index="8" style="font-size:.75rem;color:var(--lt)">⟶ Implementación del loop SSE</li>
+              <li class="fragment slide-right" data-fragment-index="9" style="font-size:.75rem;color:var(--lt)">⟶ Solución al error de CORS</li>
+              <li class="fragment slide-right" data-fragment-index="10" style="font-size:.75rem;color:var(--lt)">⟶ CSS, dark mode, animaciones</li>
+              <li class="fragment slide-right" data-fragment-index="11" style="font-size:.75rem;color:var(--lt)">⟶ Esta presentación completa</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card fragment fade-up" data-fragment-index="12"
+           style="border-left:3px solid var(--teal);padding:13px 16px">
+        <p style="font-family:'Courier New',monospace;font-size:.62rem;color:var(--teal);margin-bottom:8px">LECCIÓN APRENDIDA</p>
+        <p class="body-text" style="font-size:.8rem;line-height:1.7">
+          Usar AI estratégicamente no es copiar y pegar. Es saber <strong style="color:var(--white)">qué preguntarle</strong>, <strong style="color:var(--white)">evaluar su respuesta</strong>, y <strong style="color:var(--white)">asumir responsabilidad</strong> por las decisiones. Claude acelera la ejecución; el criterio de ingeniería sigue siendo mío.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="slide-num">05 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 6 — DASHBOARD FEATURES (antes era 4)
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label">05 · Dashboard</div>
+  <div class="rule"></div>
+
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:28px;flex:1;align-items:start">
+    <!-- Chart panel -->
+    <div>
+      <h2 class="section fragment fade-up" data-fragment-index="0" style="font-size:clamp(1.5rem,3vw,2.6rem)">
+        Disponibilidad de Tiendas<br><span class="accent-word">1 Feb 2026 · 06:11–07:00 COT</span>
+      </h2>
+      <div class="chart-wrap fragment fade-up" style="margin-top:16px;position:relative" data-fragment-index="1">
+        <div class="scan-line"></div>
+        <canvas id="availChart" width="680" height="220" style="width:100%;height:220px;display:block"></canvas>
+        <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
+          <span class="mono red" style="font-size:.62rem">— Tiendas disponibles</span>
+          <span class="mono teal" style="font-size:.62rem">- - SLO ≥ 15,000</span>
+          <span class="mono gold" style="font-size:.62rem">● Anomalías</span>
+        </div>
+      </div>
+
+      <!-- Anomaly callouts -->
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <div class="card fragment scale-in" data-fragment-index="4"
+             style="flex:1;border-left:3px solid var(--gold);padding:10px 14px">
+          <p style="color:var(--gold);font-size:.75rem;font-weight:600">⚠ Plateau 06:33–06:39</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:3px">Valores estancados 6,600–7,100. Posible throttling o saturación del sistema de monitoreo.</p>
+        </div>
+        <div class="card fragment scale-in" data-fragment-index="5"
+             style="flex:1;border-left:3px solid var(--mid);padding:10px 14px">
+          <p style="color:var(--lt);font-size:.75rem;font-weight:600">↘ Post-peak drop</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:3px">−9.7% (20,762→18,751) en 14 min. Comportamiento normal al cerrar ventana matutina.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em">KPI CARDS</p>
+
+      <div class="kpi-card fragment scale-in" data-fragment-index="2">
+        <div class="kpi-bar" style="background:var(--rappi)"></div>
+        <p class="kpi-val" style="color:var(--rappi)"><span class="counter" data-target="20762">0</span></p>
+        <p class="kpi-label">Pico de tiendas</p>
+        <p class="kpi-sub">Traffic · Golden Signal · 06:46 COT</p>
+      </div>
+
+      <div class="kpi-card fragment scale-in" data-fragment-index="2">
+        <div class="kpi-bar" style="background:var(--lt)"></div>
+        <p class="kpi-val" style="color:var(--lt)"><span class="counter" data-target="18751">0</span></p>
+        <p class="kpi-label">Tiendas al cierre</p>
+        <p class="kpi-sub">−9.7% respecto al pico</p>
+      </div>
+
+      <div class="kpi-card fragment scale-in" data-fragment-index="3">
+        <div class="kpi-bar" style="background:var(--teal)"></div>
+        <p class="kpi-val" style="color:var(--teal)"><span class="counter" data-target="92" data-suffix=".4%">0</span></p>
+        <p class="kpi-label">SLO Compliance</p>
+        <p class="kpi-sub">Error budget consumido: 7.6%</p>
+      </div>
+
+      <div class="kpi-card fragment scale-in" data-fragment-index="3">
+        <div class="kpi-bar" style="background:var(--gold)"></div>
+        <p class="kpi-val" style="color:var(--gold)">2</p>
+        <p class="kpi-label">Anomalías detectadas (AI)</p>
+        <p class="kpi-sub">1 warning · 1 info</p>
+      </div>
+
+      <div class="kpi-card fragment scale-in" data-fragment-index="3">
+        <div class="kpi-bar" style="background:var(--mid)"></div>
+        <p class="kpi-val" style="color:var(--lt)"><span class="counter" data-target="19476">0</span></p>
+        <p class="kpi-label">Promedio ventana</p>
+        <p class="kpi-sub">290 pts · intervalo 10s</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-num">06 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 5 — AI INTEGRATION
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-teal" style="--accent-word-color:var(--teal)">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label teal">06 · Integración AI</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">
+    Cómo usamos <span style="color:var(--teal)">Claude</span><br>& la Anthropic API
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:22px;flex:1;align-items:start">
+
+    <!-- Chatbot -->
+    <div class="card fragment fade-up" data-fragment-index="1" style="height:100%;box-sizing:border-box">
+      <div class="card-top-bar" style="background:var(--teal)"></div>
+      <p style="font-size:1.5rem;margin-bottom:4px">🤖</p>
+      <p style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:var(--white)">Chatbot SRE</p>
+      <p class="mono teal" style="font-size:.62rem;margin-bottom:10px">claude-sonnet-4</p>
+      <div class="rule" style="margin:0 0 10px"></div>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;font-size:.78rem;color:var(--lt)">
+        <li class="fragment slide-right" data-fragment-index="2">• System prompt con rol SRE experto</li>
+        <li class="fragment slide-right" data-fragment-index="3">• Contexto del dataset embebido</li>
+        <li class="fragment slide-right" data-fragment-index="4">• Historial de conversación</li>
+        <li class="fragment slide-right" data-fragment-index="5">• 800 tokens de respuesta</li>
+        <li class="fragment slide-right" data-fragment-index="6">• Direct browser API access</li>
+      </ul>
+      <div style="margin-top:14px;background:var(--bg);border-radius:4px;padding:8px 10px">
+        <p class="mono teal" style="font-size:.6rem">model: "claude-sonnet-4-20250514"</p>
+      </div>
+    </div>
+
+    <!-- Narrative Panel -->
+    <div class="card fragment fade-up" data-fragment-index="1" style="height:100%;box-sizing:border-box">
+      <div class="card-top-bar" style="background:var(--gold)"></div>
+      <p style="font-size:1.5rem;margin-bottom:4px">✨</p>
+      <p style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:var(--white)">Narrative Panel</p>
+      <p class="mono gold" style="font-size:.62rem;margin-bottom:10px">claude-haiku-4-5</p>
+      <div class="rule" style="margin:0 0 10px"></div>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;font-size:.78rem;color:var(--lt)">
+        <li class="fragment slide-right" data-fragment-index="2">• Auto-genera narrativa ejecutiva</li>
+        <li class="fragment slide-right" data-fragment-index="3">• Streaming SSE en tiempo real</li>
+        <li class="fragment slide-right" data-fragment-index="4">• 3 oraciones para Eng Manager</li>
+        <li class="fragment slide-right" data-fragment-index="5">• Se actualiza al cambiar CSV</li>
+        <li class="fragment slide-right" data-fragment-index="6">• max_tokens: 320 (velocidad)</li>
+      </ul>
+      <div style="margin-top:14px;background:var(--bg);border-radius:4px;padding:8px 10px">
+        <p class="mono gold" style="font-size:.6rem">model: "claude-haiku-4-5-20251001"</p>
+      </div>
+    </div>
+
+    <!-- Anomaly Detection -->
+    <div class="card fragment fade-up" data-fragment-index="1" style="height:100%;box-sizing:border-box">
+      <div class="card-top-bar" style="background:var(--rappi)"></div>
+      <p style="font-size:1.5rem;margin-bottom:4px">🔍</p>
+      <p style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:var(--white)">Anomaly Detection</p>
+      <p class="mono red" style="font-size:.62rem;margin-bottom:10px">Estadístico + AI context</p>
+      <div class="rule" style="margin:0 0 10px"></div>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;font-size:.78rem;color:var(--lt)">
+        <li class="fragment slide-right" data-fragment-index="2">• Detección de plateau 06:33–06:39</li>
+        <li class="fragment slide-right" data-fragment-index="3">• Post-peak drop identification</li>
+        <li class="fragment slide-right" data-fragment-index="4">• Context-aware via Claude API</li>
+        <li class="fragment slide-right" data-fragment-index="5">• Severidad: warning / info</li>
+        <li class="fragment slide-right" data-fragment-index="6">• Tiempo real al cargar datos</li>
+      </ul>
+      <div style="margin-top:14px;background:var(--bg);border-radius:4px;padding:8px 10px">
+        <p class="mono red" style="font-size:.6rem">avgDelta &lt; 0.1 → plateau detected</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision bar -->
+  <div class="fragment fade-up" data-fragment-index="7"
+       style="margin-top:16px;background:var(--bg-c);border-radius:6px;padding:12px 18px;border-left:3px solid var(--teal)">
+    <p class="mono teal" style="font-size:.6rem;margin-bottom:4px">¿POR QUÉ ESTAS DECISIONES?</p>
+    <p class="body-text" style="font-size:.78rem">
+      <strong style="color:var(--white)">Sonnet</strong> para razonamiento complejo en el chat ·
+      <strong style="color:var(--white)">Haiku</strong> para velocidad y bajo costo en narrativa ·
+      Ambos via <strong style="color:var(--teal)">Anthropic API directa desde el browser</strong>
+    </p>
+  </div>
+
+  <div class="slide-num">07 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 6 — GOLDEN SIGNALS / SRE
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-teal">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label teal">07 · SRE Framework</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">
+    Golden Signals<br><span style="color:var(--teal)">& SLO Analysis</span>
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-top:20px">
+    <div class="card fragment scale-in" data-fragment-index="1" style="text-align:center;padding:18px 14px">
+      <div class="card-top-bar" style="background:var(--teal)"></div>
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:6px">TRAFFIC</p>
+      <p style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--teal)">20,762</p>
+      <p class="mono" style="font-size:.6rem;color:var(--mid)">stores peak</p>
+      <div class="rule"></div>
+      <p class="body-text" style="font-size:.72rem">Carga máxima del sistema en la ventana analizada.</p>
+      <span class="pill teal" style="margin-top:8px;display:inline-block">ok</span>
+    </div>
+    <div class="card fragment scale-in" data-fragment-index="2" style="text-align:center;padding:18px 14px">
+      <div class="card-top-bar" style="background:var(--gold)"></div>
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:6px">SATURATION</p>
+      <p style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--gold)">90%</p>
+      <p class="mono" style="font-size:.6rem;color:var(--mid)">del pico al cierre</p>
+      <div class="rule"></div>
+      <p class="body-text" style="font-size:.72rem">Caída del 9.7% post-pico es aceptable.</p>
+      <span class="pill gold" style="margin-top:8px;display:inline-block">ok</span>
+    </div>
+    <div class="card fragment scale-in" data-fragment-index="3" style="text-align:center;padding:18px 14px">
+      <div class="card-top-bar" style="background:var(--mid)"></div>
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:6px">ERRORS</p>
+      <p style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--mid)">N/A</p>
+      <p class="mono" style="font-size:.6rem;color:var(--mid)">sin datos de error</p>
+      <div class="rule"></div>
+      <p class="body-text" style="font-size:.72rem">CSV sin error rate. En prod: HTTP 5xx / failed probes.</p>
+      <span class="pill" style="margin-top:8px;display:inline-block">info</span>
+    </div>
+    <div class="card fragment scale-in" data-fragment-index="4" style="text-align:center;padding:18px 14px">
+      <div class="card-top-bar" style="background:var(--rappi)"></div>
+      <p class="mono" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:6px">LATENCY</p>
+      <p style="font-family:Georgia,serif;font-size:2rem;font-weight:700;color:var(--rappi)">10s</p>
+      <p class="mono" style="font-size:.6rem;color:var(--mid)">intervalo de sondeo</p>
+      <div class="rule"></div>
+      <p class="body-text" style="font-size:.72rem">Monitoreo cada 10 segundos. Suficiente para análisis.</p>
+      <span class="pill red" style="margin-top:8px;display:inline-block">ok</span>
+    </div>
+  </div>
+
+  <!-- SLO block -->
+  <div class="card fragment fade-up" data-fragment-index="5"
+       style="margin-top:16px;border-left:3px solid var(--teal);display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:16px 20px">
+    <div>
+      <p class="mono" style="font-size:.58rem;letter-spacing:.1em">SLO TARGET</p>
+      <p style="font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--teal);margin-top:4px">≥ 15,000 tiendas</p>
+    </div>
+    <div>
+      <p class="mono" style="font-size:.58rem;letter-spacing:.1em">COMPLIANCE</p>
+      <p style="font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--white);margin-top:4px">92.4% del tiempo</p>
+    </div>
+    <div>
+      <p class="mono" style="font-size:.58rem;letter-spacing:.1em">ERROR BUDGET</p>
+      <p style="font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--gold);margin-top:4px">7.6% consumido</p>
+    </div>
+    <div>
+      <p class="mono" style="font-size:.58rem;letter-spacing:.1em">PERIODO BAJO SLO</p>
+      <p style="font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--mid);margin-top:4px">06:11–06:25 (ramp-up)</p>
+    </div>
+  </div>
+
+  <div class="slide-num">08 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 7 — TECH STACK
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-gold">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label gold">08 · Stack Técnico</div>
+  <div class="rule"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:36px;flex:1;align-items:start">
+    <div>
+      <h2 class="section fragment fade-up" data-fragment-index="0">
+        Stack &<br><span style="color:var(--gold)">Decisiones</span><br>Técnicas
+      </h2>
+      <!-- AI usage note -->
+      <div class="card fragment fade-up" data-fragment-index="6"
+           style="margin-top:20px;border-left:3px solid var(--gold)">
+        <p class="mono gold" style="font-size:.6rem;margin-bottom:8px">¿FUE ESTRATÉGICO O COPY/PASTE?</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="fragment slide-right" data-fragment-index="7">
+            <p style="color:var(--gold);font-size:.75rem;font-weight:600">Scaffolding</p>
+            <p class="body-text" style="font-size:.72rem">Estructura inicial generada con Claude Cowork</p>
+          </div>
+          <div class="fragment slide-right" data-fragment-index="8">
+            <p style="color:var(--teal);font-size:.75rem;font-weight:600">System Prompts</p>
+            <p class="body-text" style="font-size:.72rem">Diseño iterativo del rol SRE con Claude</p>
+          </div>
+          <div class="fragment slide-right" data-fragment-index="9">
+            <p style="color:var(--rappi);font-size:.75rem;font-weight:600">Debug & UX</p>
+            <p class="body-text" style="font-size:.72rem">CORS, SSE streaming, paleta de colores</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="card fragment fade-up" data-fragment-index="1" style="border-left:3px solid #61DAFB">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;color:#61DAFB">React 19</p>
+          <span class="mono" style="font-size:.6rem;color:var(--mid)">UI Framework</span>
+        </div>
+        <p class="body-text" style="font-size:.75rem;margin-top:5px">Composición por componentes, Hooks para estado reactivo. Cada panel del dashboard es un componente independiente.</p>
+      </div>
+      <div class="card fragment fade-up" data-fragment-index="2" style="border-left:3px solid #BD34FE">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;color:#BD34FE">Vite 6</p>
+          <span class="mono" style="font-size:.6rem;color:var(--mid)">Build Tool + Dev Server</span>
+        </div>
+        <p class="body-text" style="font-size:.75rem;margin-top:5px">HMR instantáneo. Variables de entorno para la API key via <span class="mono red">import.meta.env.VITE_ANTHROPIC_API_KEY</span></p>
+      </div>
+      <div class="card fragment fade-up" data-fragment-index="3" style="border-left:3px solid var(--rappi)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;color:var(--rappi)">Recharts</p>
+          <span class="mono" style="font-size:.6rem;color:var(--mid)">Data Visualization</span>
+        </div>
+        <p class="body-text" style="font-size:.75rem;margin-top:5px">Declarativo basado en SVG. AreaChart, ReferenceLine para SLO, tooltip personalizable.</p>
+      </div>
+      <div class="card fragment fade-up" data-fragment-index="4" style="border-left:3px solid #CC785C">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;color:#CC785C">Anthropic API</p>
+          <span class="mono" style="font-size:.6rem;color:var(--mid)">AI Backend</span>
+        </div>
+        <p class="body-text" style="font-size:.75rem;margin-top:5px">Direct browser access con <span class="mono teal">anthropic-dangerous-direct-browser-access</span>. SSE streaming para NarrativePanel.</p>
+      </div>
+      <div class="card fragment fade-up" data-fragment-index="5" style="border-left:3px solid var(--teal)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <p style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;color:var(--teal)">Claude in Cowork</p>
+          <span class="mono" style="font-size:.6rem;color:var(--mid)">AI Development Tool</span>
+        </div>
+        <p class="body-text" style="font-size:.75rem;margin-top:5px">Todo el proyecto y esta presentación fueron construidos con Claude como copiloto estratégico.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-num">09 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 8 — DEMO / RESULTADOS
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label">09 · Resultados</div>
+  <div class="rule"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;flex:1;align-items:start">
+    <div>
+      <h2 class="section fragment fade-up" data-fragment-index="0">
+        Demo &<br><span class="accent-word">Resultados</span>
+      </h2>
+
+      <!-- Mock app UI -->
+      <div class="card fragment fade-up" data-fragment-index="1"
+           style="margin-top:16px;padding:0;overflow:hidden">
+        <!-- Header mock -->
+        <div style="background:var(--bg);padding:8px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.8rem;font-weight:700;color:var(--white)">Rappi Store Availability</span>
+          <span style="font-size:.65rem;color:var(--teal);font-family:'Courier New',monospace">● LIVE</span>
+        </div>
+        <!-- KPI row mock -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px;background:var(--bg-p)">
+          <div class="kpi-card fragment scale-in" data-fragment-index="2" style="padding:8px 10px">
+            <div class="kpi-bar" style="background:var(--rappi)"></div>
+            <p style="font-size:.85rem;font-weight:700;color:var(--rappi);font-family:Georgia,serif">20,762</p>
+            <p style="font-size:.55rem;color:var(--mid)">Pico Tiendas</p>
+          </div>
+          <div class="kpi-card fragment scale-in" data-fragment-index="2" style="padding:8px 10px">
+            <div class="kpi-bar" style="background:var(--lt)"></div>
+            <p style="font-size:.85rem;font-weight:700;color:var(--lt);font-family:Georgia,serif">18,751</p>
+            <p style="font-size:.55rem;color:var(--mid)">Al Cierre</p>
+          </div>
+          <div class="kpi-card fragment scale-in" data-fragment-index="2" style="padding:8px 10px">
+            <div class="kpi-bar" style="background:var(--teal)"></div>
+            <p style="font-size:.85rem;font-weight:700;color:var(--teal);font-family:Georgia,serif">92.4%</p>
+            <p style="font-size:.55rem;color:var(--mid)">SLO</p>
+          </div>
+          <div class="kpi-card fragment scale-in" data-fragment-index="2" style="padding:8px 10px">
+            <div class="kpi-bar" style="background:var(--gold)"></div>
+            <p style="font-size:.85rem;font-weight:700;color:var(--gold);font-family:Georgia,serif">2</p>
+            <p style="font-size:.55rem;color:var(--mid)">Anomalías</p>
+          </div>
+          <div class="kpi-card fragment scale-in" data-fragment-index="2" style="padding:8px 10px">
+            <div class="kpi-bar" style="background:var(--mid)"></div>
+            <p style="font-size:.85rem;font-weight:700;color:var(--lt);font-family:Georgia,serif">19,476</p>
+            <p style="font-size:.55rem;color:var(--mid)">Promedio</p>
+          </div>
+        </div>
+        <!-- Chart + chat mini mock -->
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:4px;padding:0 8px 8px;background:var(--bg-p)">
+          <div style="background:var(--bg-c);border-radius:4px;padding:8px;position:relative;overflow:hidden">
+            <div class="scan-line" style="animation-duration:4s"></div>
+            <canvas id="miniChart" height="80"></canvas>
+          </div>
+          <div style="background:var(--bg-c);border-radius:4px;padding:8px">
+            <p class="mono teal" style="font-size:.55rem">Availability AI ●</p>
+            <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+              <div style="background:var(--rappi);border-radius:4px;padding:3px 6px;align-self:flex-end">
+                <p style="font-size:.55rem;color:white">¿Cuándo fue el pico?</p>
+              </div>
+              <div style="background:var(--bg-s);border-radius:4px;padding:3px 6px">
+                <p style="font-size:.55rem;color:var(--lt)">El pico fue a las 06:46 COT con 20,762 tiendas.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Run instructions -->
+      <div class="card fragment fade-up" data-fragment-index="3" style="margin-top:10px;background:var(--bg-p)">
+        <p class="mono gold" style="font-size:.6rem;margin-bottom:6px">CÓMO EJECUTAR</p>
+        <p class="mono" style="font-size:.7rem;line-height:1.8">
+          $ npm install<br>
+          $ echo VITE_ANTHROPIC_API_KEY=sk-ant-... > .env<br>
+          $ npm run dev  <span style="color:var(--teal)">→  localhost:5173</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Checklist -->
+    <div>
+      <p class="mono fragment fade-up" data-fragment-index="1" style="font-size:.6rem;letter-spacing:.1em;margin-bottom:12px">CHECKLIST DE FUNCIONALIDADES</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="fragment fade-up" data-fragment-index="2" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">App 100% funcional localmente</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="2" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">Dashboard con datos reales del CSV</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="3" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">Chatbot responde sobre SLOs y KPIs</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="3" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">Narrativa AI en streaming SSE</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="4" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">Dark / Light mode</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="4" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--teal);font-size:1.1rem;min-width:20px">✓</span>
+          <p class="body-text" style="font-size:.82rem">Carga de CSV personalizado</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="5" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--gold);font-size:1.1rem;min-width:20px">★</span>
+          <p class="body-text" style="font-size:.82rem">SplashScreen animado con logo Rappi</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="5" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--gold);font-size:1.1rem;min-width:20px">★</span>
+          <p class="body-text" style="font-size:.82rem">Golden Signals framework (Google SRE Book)</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="6" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--gold);font-size:1.1rem;min-width:20px">★</span>
+          <p class="body-text" style="font-size:.82rem">2 modelos Claude distintos por caso de uso</p>
+        </div>
+        <div class="fragment fade-up" data-fragment-index="6" style="display:flex;align-items:center;gap:12px">
+          <span style="color:var(--gold);font-size:1.1rem;min-width:20px">★</span>
+          <p class="body-text" style="font-size:.82rem">Anomaly detection estadístico + AI context</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-num">10 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 9 — CÓDIGO FUENTE
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-red">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label">10 · Código Fuente</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0" style="font-size:clamp(1.6rem,3.2vw,2.8rem)">
+    Arquitectura del <span class="accent-word">Código</span>
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px;flex:1;align-items:start">
+
+    <!-- Left: ChatBot API call -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="card fragment fade-up" data-fragment-index="1" style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="mono red" style="font-size:.62rem">ChatBot.jsx · Anthropic API call</span>
+          <span class="pill red" style="font-size:.58rem">claude-sonnet-4</span>
+        </div>
+        <pre style="margin:0;font-family:'Courier New',monospace;font-size:.68rem;line-height:1.65;color:#C8C2BA;overflow:hidden;white-space:pre-wrap"><span style="color:#7A7269">// llamada directa desde el browser</span>
+<span style="color:#38BFA1">const</span> response = <span style="color:#38BFA1">await</span> fetch(
+  <span style="color:#C9A84C">'https://api.anthropic.com/v1/messages'</span>,
+  {
+    headers: {
+      <span style="color:#C9A84C">'x-api-key'</span>: <span style="color:#E84510">apiKey</span>,
+      <span style="color:#C9A84C">'anthropic-version'</span>: <span style="color:#C9A84C">'2023-06-01'</span>,
+      <span style="color:#C9A84C">'anthropic-dangerous-direct-browser-access'</span>: <span style="color:#C9A84C">'true'</span>,
+    },
+    body: JSON.stringify({
+      model: <span style="color:#C9A84C">'claude-sonnet-4-20250514'</span>,
+      max_tokens: <span style="color:#E84510">800</span>,
+      system: <span style="color:#E84510">SYSTEM_PROMPT</span>,
+      messages: <span style="color:#E84510">apiHistory</span>,
+    }),
+  }
+)</pre>
+      </div>
+
+      <div class="card fragment fade-up" data-fragment-index="3" style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="mono red" style="font-size:.62rem">App.jsx · Layout principal</span>
+          <span class="pill" style="font-size:.58rem">React 19</span>
+        </div>
+        <pre style="margin:0;font-family:'Courier New',monospace;font-size:.68rem;line-height:1.65;color:#C8C2BA;overflow:hidden;white-space:pre-wrap"><span style="color:#38BFA1">return</span> (
+  &lt;<span style="color:#E84510">div</span>&gt;
+    &lt;<span style="color:#E84510">SplashScreen</span> onFinish={() =&gt; setShowSplash(<span style="color:#38BFA1">false</span>)} /&gt;
+    &lt;<span style="color:#E84510">Header</span> darkMode={darkMode} /&gt;
+    &lt;<span style="color:#E84510">main</span> className=<span style="color:#C9A84C">"layout-main"</span>&gt;
+      &lt;<span style="color:#E84510">section</span> className=<span style="color:#C9A84C">"grid-kpis"</span>&gt;
+        &lt;<span style="color:#E84510">KpiCard</span> label=<span style="color:#C9A84C">"Pico de tiendas"</span> value={stats.max} /&gt;
+        <span style="color:#7A7269">{/* × 5 KPI Cards */}</span>
+      &lt;/<span style="color:#E84510">section</span>&gt;
+      &lt;<span style="color:#E84510">AvailabilityChart</span> series={series} stats={stats} /&gt;
+      &lt;<span style="color:#E84510">ChatBot</span> /&gt;
+      &lt;<span style="color:#E84510">NarrativePanel</span> series={series} stats={stats} /&gt;
+      &lt;<span style="color:#E84510">GoldenSignals</span> /&gt; &lt;<span style="color:#E84510">AnomalyPanel</span> /&gt; &lt;<span style="color:#E84510">SloSummary</span> /&gt;
+    &lt;/<span style="color:#E84510">main</span>&gt;
+  &lt;/<span style="color:#E84510">div</span>&gt;
+)</pre>
+      </div>
+
+    </div>
+
+    <!-- Right: SSE Streaming + buildPrompt -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="card fragment fade-up" data-fragment-index="2" style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="mono teal" style="font-size:.62rem">NarrativePanel.jsx · SSE Streaming</span>
+          <span class="pill teal" style="font-size:.58rem">claude-haiku-4-5</span>
+        </div>
+        <pre style="margin:0;font-family:'Courier New',monospace;font-size:.68rem;line-height:1.65;color:#C8C2BA;overflow:hidden;white-space:pre-wrap"><span style="color:#7A7269">// Leer stream SSE en tiempo real</span>
+<span style="color:#38BFA1">const</span> reader  = res.body.<span style="color:#E84510">getReader</span>()
+<span style="color:#38BFA1">const</span> decoder = <span style="color:#38BFA1">new</span> TextDecoder()
+
+<span style="color:#38BFA1">while</span> (<span style="color:#38BFA1">true</span>) {
+  <span style="color:#38BFA1">const</span> { done, value } = <span style="color:#38BFA1">await</span> reader.<span style="color:#E84510">read</span>()
+  <span style="color:#38BFA1">if</span> (done) <span style="color:#38BFA1">break</span>
+  <span style="color:#38BFA1">const</span> chunk = decoder.<span style="color:#E84510">decode</span>(value, { stream: <span style="color:#38BFA1">true</span> })
+  <span style="color:#38BFA1">for</span> (<span style="color:#38BFA1">const</span> line <span style="color:#38BFA1">of</span> chunk.<span style="color:#E84510">split</span>(<span style="color:#C9A84C">'\n'</span>)) {
+    <span style="color:#38BFA1">if</span> (!line.<span style="color:#E84510">startsWith</span>(<span style="color:#C9A84C">'data: '</span>)) <span style="color:#38BFA1">continue</span>
+    <span style="color:#38BFA1">const</span> parsed = JSON.<span style="color:#E84510">parse</span>(line.<span style="color:#E84510">slice</span>(<span style="color:#E84510">6</span>))
+    <span style="color:#38BFA1">if</span> (parsed.type === <span style="color:#C9A84C">'content_block_delta'</span>)
+      <span style="color:#E84510">setText</span>(prev =&gt; prev + parsed.delta.text)
+  }
+}</pre>
+      </div>
+
+      <div class="card fragment fade-up" data-fragment-index="4" style="padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="mono gold" style="font-size:.62rem">NarrativePanel.jsx · Detección de plateau</span>
+          <span class="pill gold" style="font-size:.58rem">Anomaly Detection</span>
+        </div>
+        <pre style="margin:0;font-family:'Courier New',monospace;font-size:.68rem;line-height:1.65;color:#C8C2BA;overflow:hidden;white-space:pre-wrap"><span style="color:#7A7269">// Detección estadística de plateau en serie</span>
+<span style="color:#38BFA1">const</span> deltas = sampled.<span style="color:#E84510">slice</span>(<span style="color:#E84510">1</span>).<span style="color:#E84510">map</span>((d, i) =&gt;
+  Math.<span style="color:#E84510">abs</span>(d.value - sampled[i].value)
+)
+<span style="color:#38BFA1">const</span> avgDelta = deltas.<span style="color:#E84510">reduce</span>(
+  (a, b) =&gt; a + b, <span style="color:#E84510">0</span>
+) / (deltas.length || <span style="color:#E84510">1</span>)
+<span style="color:#38BFA1">const</span> flatCount = deltas.<span style="color:#E84510">filter</span>(
+  d =&gt; d &lt; avgDelta * <span style="color:#E84510">0.1</span>
+).length
+
+<span style="color:#7A7269">// Si hay &gt;6 segmentos planos → plateau detectado</span>
+<span style="color:#38BFA1">const</span> plateauNote = flatCount &gt; <span style="color:#E84510">6</span>
+  ? <span style="color:#C9A84C">`Plateau: ${flatCount} segs &lt; 10% avgDelta`</span>
+  : <span style="color:#C9A84C">''</span></pre>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- File structure footer -->
+  <div class="fragment fade-up" data-fragment-index="5"
+       style="margin-top:12px;background:var(--bg-c);border-radius:6px;padding:10px 18px;display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+    <span class="mono" style="font-size:.6rem;letter-spacing:.1em;color:var(--mid)">ESTRUCTURA src/</span>
+    <span class="mono red"  style="font-size:.68rem">App.jsx</span>
+    <span class="mono teal" style="font-size:.68rem">ChatBot.jsx</span>
+    <span class="mono teal" style="font-size:.68rem">NarrativePanel.jsx</span>
+    <span class="mono"      style="font-size:.68rem">AvailabilityChart.jsx</span>
+    <span class="mono"      style="font-size:.68rem">GoldenSignals.jsx</span>
+    <span class="mono"      style="font-size:.68rem">AnomalyPanel.jsx</span>
+    <span class="mono"      style="font-size:.68rem">SloSummary.jsx</span>
+    <span class="mono"      style="font-size:.68rem">KpiCard.jsx</span>
+    <span class="mono gold" style="font-size:.68rem">availabilityData.js</span>
+  </div>
+
+  <div class="slide-num">11 / 12</div>
+</div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════
+     SLIDE 10 — BIBLIOGRAFÍAS
+════════════════════════════════════════════════════════ -->
+<section data-transition="slide">
+<div class="slide accent-mid">
+  <div class="corners"><span></span><span></span><span></span><span></span></div>
+
+  <div class="label mid">11 · Referencias</div>
+  <div class="rule"></div>
+
+  <h2 class="section fragment fade-up" data-fragment-index="0">
+    Referencias &<br><span style="color:var(--lt)">Bibliografías</span>
+  </h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;flex:1;align-items:start">
+
+    <div class="ref-card fragment fade-up" data-fragment-index="1" style="border-left-color:var(--teal)">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:var(--teal)">01</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">Google SRE Book</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">Beyer et al. · O'Reilly Media · 2016</p>
+          <p class="mono teal" style="font-size:.6rem;margin-top:2px">sre.google/sre-book/</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">Base conceptual de Golden Signals (Traffic, Saturation, Errors, Latency) y el framework SLO/SLI/Error Budget</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card fragment fade-up" data-fragment-index="2" style="border-left-color:#CC785C">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:#CC785C">02</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">Anthropic Claude API Docs</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">Anthropic, PBC · 2025</p>
+          <p class="mono" style="font-size:.6rem;margin-top:2px;color:#CC785C">docs.anthropic.com/en/api</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">Messages API, streaming SSE, modelos claude-sonnet-4 y claude-haiku-4-5, browser direct access</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card fragment fade-up" data-fragment-index="3" style="border-left-color:#61DAFB">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:#61DAFB">03</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">React Documentation — React 19</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">Meta Open Source · 2024</p>
+          <p class="mono" style="font-size:.6rem;margin-top:2px;color:#61DAFB">react.dev/reference/react</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">Hooks (useState, useEffect, useRef, useMemo), componentes funcionales y composición de UI</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card fragment fade-up" data-fragment-index="4" style="border-left-color:var(--rappi)">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:var(--rappi)">04</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">Recharts — Composable Charting Library</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">recharts.org · 2024</p>
+          <p class="mono red" style="font-size:.6rem;margin-top:2px">recharts.org/api</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">AreaChart, ReferenceLine, Tooltip personalizable para la visualización de series temporales</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card fragment fade-up" data-fragment-index="5" style="border-left-color:#BD34FE">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:#BD34FE">05</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">Vite — Next Generation Frontend Tooling</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">Evan You & Vite contributors · 2024</p>
+          <p class="mono" style="font-size:.6rem;margin-top:2px;color:#BD34FE">vitejs.dev/guide/</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">Build tool, HMR, variables de entorno (import.meta.env) para API key management seguro</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card fragment fade-up" data-fragment-index="6" style="border-left-color:var(--gold)">
+      <div style="display:flex;gap:12px;align-items:baseline">
+        <span class="ref-num" style="color:var(--gold)">06</span>
+        <div>
+          <p style="font-size:.82rem;font-weight:700;color:var(--white)">Server-Sent Events (SSE) — MDN Web Docs</p>
+          <p class="mono" style="font-size:.6rem;color:var(--mid)">Mozilla Developer Network · 2024</p>
+          <p class="mono gold" style="font-size:.6rem;margin-top:2px">developer.mozilla.org/…/Server-sent_events</p>
+          <p class="body-text" style="font-size:.72rem;margin-top:5px">Protocolo de streaming usado en NarrativePanel para recibir respuestas de Claude en tiempo real</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="slide-num">12 / 12</div>
+</div>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<!-- ── Scripts ─────────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+// ── Reveal init ──────────────────────────────────────────────────────────────
+Reveal.initialize({
+  hash: true,
+  transition: 'slide',
+  transitionSpeed: 'default',
+  backgroundTransition: 'fade',
+  controls: true,
+  progress: true,
+  center: false,
+  width: '100%',
+  height: '100%',
+  margin: 0,
+  minScale: 0.5,
+  maxScale: 2.0,
+  plugins: []
+});
+
+// ── Dataset helpers ──────────────────────────────────────────────────────────
+function storeValue(t) {
+  if (t < 0.35) return Math.round(37 + 5997 * (t / 0.35));
+  if (t < 0.68) return Math.round(6034 + 14728 * ((t - 0.35) / 0.33) + 400 * Math.sin(t * 18));
+  const v = 20762 - 2011 * ((t - 0.68) / 0.32) + 200 * Math.sin(t * 12);
+  return Math.round(Math.min(20762, v));
+}
+
+const N = 290;
+const labels = [];
+const dataFull = [];
+for (let i = 0; i < N; i++) {
+  const t = i / N;
+  const mins = Math.floor(6 * 60 + 11 + i * (49 / N));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  labels.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  dataFull.push(storeValue(t));
+}
+
+// ── Main chart (slide 4) ─────────────────────────────────────────────────────
+let mainChart = null;
+let miniChart = null;
+
+function initMainChart() {
+  const canvas = document.getElementById('availChart');
+  if (!canvas) return;
+  // Destroy previous instance if exists (allows re-init on revisit)
+  if (mainChart) { mainChart.destroy(); mainChart = null; }
+  // Force canvas to have explicit pixel dimensions
+  canvas.width  = canvas.parentElement.clientWidth  || 700;
+  canvas.height = 220;
+  mainChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels.filter((_,i) => i % 3 === 0),
+      datasets: [
+        {
+          data: dataFull.filter((_,i) => i % 3 === 0),
+          borderColor: '#E84510',
+          backgroundColor: 'rgba(232,69,16,0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          data: Array(Math.ceil(N/3)).fill(15000),
+          borderColor: '#38BFA1',
+          borderDash: [6, 3],
+          borderWidth: 1.2,
+          fill: false,
+          pointRadius: 0,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      animation: { duration: 1600, easing: 'easeInOutQuart' },
+      scales: {
+        x: {
+          ticks: { color: '#7A7269', font: { family: 'Courier New', size: 9 }, maxTicksLimit: 8 },
+          grid: { color: 'rgba(58,53,48,0.5)' }
+        },
+        y: {
+          ticks: {
+            color: '#7A7269', font: { family: 'Courier New', size: 9 },
+            callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v
+          },
+          grid: { color: 'rgba(58,53,48,0.5)' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1C1A17',
+          borderColor: '#3A3530',
+          borderWidth: 1,
+          titleColor: '#C8C2BA',
+          bodyColor: '#E84510',
+          callbacks: { label: c => ' ' + c.raw.toLocaleString('es') + ' tiendas' }
+        }
+      }
+    }
+  });
+}
+
+function initMiniChart() {
+  const ctx = document.getElementById('miniChart');
+  if (!ctx || miniChart) return;
+  miniChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels.filter((_,i) => i % 6 === 0),
+      datasets: [{
+        data: dataFull.filter((_,i) => i % 6 === 0),
+        borderColor: '#E84510',
+        backgroundColor: 'rgba(232,69,16,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        borderWidth: 1.5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      animation: { duration: 1200 },
+      scales: { x: { display: false }, y: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+}
+
+// ── Counter animation ────────────────────────────────────────────────────────
+function animateCounters(slide) {
+  const counters = slide.querySelectorAll('.counter');
+  counters.forEach(el => {
+    const target = parseInt(el.dataset.target);
+    const suffix = el.dataset.suffix || '';
+    const duration = 1200;
+    const steps = 60;
+    const increment = target / steps;
+    let current = 0;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      current = Math.min(Math.round(increment * step), target);
+      el.textContent = current.toLocaleString('es') + suffix;
+      if (step >= steps) clearInterval(timer);
+    }, duration / steps);
+  });
+}
+
+// ── Reveal event listeners ───────────────────────────────────────────────────
+Reveal.on('slidechanged', event => {
+  const idx = event.indexh;
+  if (idx === 3) {
+    setTimeout(() => { initMainChart(); animateCounters(event.currentSlide); }, 350);
+  }
+  if (idx === 7) {
+    setTimeout(initMiniChart, 250);
+  }
+});
+
+Reveal.on('fragmentshown', event => {
+  const frag = event.fragment;
+  if (frag.querySelectorAll('.counter').length) animateCounters(frag);
+});
+
+Reveal.on('ready', event => {
+  const idx = Reveal.getIndices().h;
+  if (idx === 3) {
+    setTimeout(() => { initMainChart(); animateCounters(event.currentSlide); }, 400);
+  }
+  if (idx === 7) setTimeout(initMiniChart, 300);
+  // Pre-warm canvas size for slide 4 even if not on it
+  const c = document.getElementById('availChart');
+  if (c && !mainChart) {
+    c.width  = 680;
+    c.height = 220;
+  }
+});
+</script>
+</body>
+</html>
